@@ -1,5 +1,5 @@
-require 'open-uri'
 require 'pry'
+require 'open-uri'
 
 class Scraper
     attr_accessor :twitter, :linkedin, :github, :blog, :profile_quote, :bio
