@@ -1,64 +1,53 @@
-require 'pry'
+require 'nokogiri'
 require 'open-uri'
+require 'pry'
 
 class Scraper
-  attr_accessor :twitter, :linkedin, :github, :blog, :profile_quote, :bio
 
-	def self.scrape_index_page(index_url)
-    students = []
-    name = ""
-    location = ""
-    profile_url = ""
+  def self.scrape_index_page(index_url)
+    page = Nokogiri::HTML(open(index_url))
 
-    html = open(index_url)
-    doc = Nokogiri::HTML(html)
+    profiles = []
 
-    doc.css("div.student-card").each do |i|
-    students << {
-    name: i.css("h4.student-name").text,
-    location: i.css("p.student-location").text,
-    profile_url: "http://127.0.0.1:4000/fixtures/student-site/#{i.css("a").first["href"]}"
-   }
+    page.css(".student-card").each do |profile|
+      new_profile = {
+        :name => profile.css(".student-name").text,
+        :location => profile.css(".student-location").text,
+        :profile_url => profile.css("a").attribute("href").value
+        }
+      profiles << new_profile
     end
-    students
+    profiles
   end
 
   def self.scrape_profile_page(profile_url)
-    doc = Nokogiri::HTML(open(profile_url))
-    social_container = doc.css("div.social-icon-container")
-    twitter = ""
-    linkedin = ""
-    github = ""
-    blog = ""
-    profile_quote = doc.css(".profile-quote").text
-    bio = doc.css(".description-holder p").text
+    page = Nokogiri::HTML(open(profile_url))
+    social = page.css(".social-icon-container")
     profile = {}
 
-    social_container.css("a").each do |i|
-    if i.attribute("href").value.include?("twitter")
-     twitter = i.attribute("href").value
-       elsif i.attribute("href").value.include?("github")
-         github = i.attribute("href").value
-       elsif i.attribute("href").value.include?("linkedin")
-         linkedin = i.attribute("href").value
-       elsif i.children[0].attribute("src").value == "../assets/img/rss-icon.png"
-         blog = i.attribute("href").value
-       end
-    end
-    profile = {
-    :twitter => twitter,
-    :linkedin => linkedin,
-    :github => github,
-    :blog => blog,
-    :profile_quote => profile_quote,
-    :bio => bio
-    }
+    profile[:profile_quote] = page.css(".profile-quote").text
+    profile[:bio] = page.css(".description-holder p").text
 
-    profile.each do |key, value|
-    profile.delete(key) if value == ""
+    counter = 0
 
+    while counter < 8 do
+
+      link = social.css("a")[counter].attribute("href").value unless social.css("a")[counter] == nil
+
+      if link.include?("twitter")
+        profile[:twitter] = link
+      elsif link.include?("linkedin")
+        profile[:linkedin] = link
+      elsif link.include?("github")
+        profile[:github] = link
+      elsif link
+        profile[:blog] = link
+      else
+      end
+
+      counter += 1
     end
+
     profile
   end
-
 end
